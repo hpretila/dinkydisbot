@@ -83,12 +83,12 @@ class DinkyDisBot(discord.Client):
             await channel.send(message)
 
     async def process_message(self, message: discord.Message = None, channel: discord.TextChannel = None) -> None:
+        # Get the message log of the message's channel
+        if channel is None:
+            channel = message.channel
+            
         # Show the typing
         async with channel.typing():
-            # Get the message log of the message's channel
-            if channel is None:
-                channel = message.channel
-
             message_log: MessageLog = await self.thread_manager.generate_message_log(channel)
 
             # Put it through the backend
