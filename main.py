@@ -5,14 +5,12 @@ from discord.ext import commands
 
 from bot_settings import Settings
 from channel_manager import ChannelManager
-from chat_backend import BaseBackend
-from chat_backend_gpt_turbo import GPTTurboBackend
 from chat_log import MessageLog
 
 class DinkyDisBot(discord.Client):
-    def __init__(self, backend: BaseBackend, **kwargs):
+    def __init__(self, backend, **kwargs):
         super().__init__(**kwargs)
-        self.backend: BaseBackend = backend
+        self.backend = backend
         self.db_conn: sqlite3.Connection = sqlite3.connect('threads.db')
         self.thread_manager: ChannelManager = ChannelManager(self.db_conn)
     
@@ -107,7 +105,7 @@ def run_bot():
     intents.message_content = True
 
     # Create the backend
-    backend: BaseBackend = Settings.BACKEND(settings=Settings)
+    backend = Settings.BACKEND(settings=Settings)
 
     # creates the bot
     client = DinkyDisBot(backend=backend, intents=intents)
