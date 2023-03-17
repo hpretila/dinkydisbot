@@ -16,9 +16,10 @@ class GPTTurboBackend(BaseBackend):
         print("Contacting Python API for GPT-Turbo response...")
               
         # Grab the ChatML of the message log
-        chat_ml = message_log.to_chat_ml()
+        chat_ml = message_log.to_chat_ml(char_limit=10000) # 16000 is the max length of a message in ChatGPT apparently!
+        raw = message_log.__str__()
 
-        print("ChatML:" + str(chat_ml))
+        print(f"ChatML (LEN{len(raw)}):" + str(chat_ml))
 
         # Prepend the ChatML with the GPT-Turbo prompt
         chat_ml.insert(0, {"role": "assistant", "content": f"{bot_name}: Example message response."})

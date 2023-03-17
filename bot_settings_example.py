@@ -5,3 +5,4 @@ class Settings:
     DISCORD_TOKEN: int = ""
     OPENAI_API_KEY: str = ""
     BACKEND: type['BaseBackend'] = GPTTurboBackend
+    OWNER = None
