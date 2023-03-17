@@ -84,7 +84,7 @@ class DinkyDisBot(discord.Client):
 
     async def process_message(self, message: discord.Message = None, channel: discord.TextChannel = None) -> None:
         # Show the typing
-        async with message.channel.typing():
+        async with channel.typing():
             # Get the message log of the message's channel
             if channel is None:
                 channel = message.channel
@@ -147,7 +147,7 @@ class DinkyDisBot(discord.Client):
 
         elif message.content.startswith('!continue'):
             # Get the channel, preserve it
-            channel: discord.TextChannel = copy.deepcopy(message.channel)
+            channel: discord.TextChannel = self.get_channel(message.channel.id)
 
             # Add this channel to the database if it isn't already
             if not self.thread_manager.is_channel_id_in_database(channel.id):
