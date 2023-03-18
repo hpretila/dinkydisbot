@@ -10,7 +10,7 @@ class GPTTurboBackend(BaseBackend):
 
     def get_response(self, message_log: MessageLog, bot_name: str) -> str:
         """
-        Get Response from GPT=3.5-Turbo
+        Get Response from GPT-3.5-Turbo
         """
 
         print("Contacting Python API for GPT-Turbo response...")

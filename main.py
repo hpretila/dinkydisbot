@@ -21,6 +21,11 @@ class DinkyDisBot(discord.Client):
     async def on_message(self, message: discord.Message) -> None:
         if message.author == self.user:
             return
+        
+        if message.content.strip() == '!kill' and message.author.id == Settings.OWNER:
+            # Kill the bot
+            print("Killed bot.")
+            exit()
 
         if message.content.startswith('!thread'):
             async with message.channel.typing():
@@ -51,8 +56,8 @@ class DinkyDisBot(discord.Client):
 
                 # Send the response
             await self.send_message(response, channel)
-
-        elif message.content.startswith('!continue'):
+        # Only allow if in WHITELIST
+        elif message.content.startswith('!continue') and message.author.id in Settings.WHITELIST:
             # Get the channel, preserve it
             channel: discord.TextChannel = copy.deepcopy(message.channel)
 
@@ -69,10 +74,10 @@ class DinkyDisBot(discord.Client):
             async with message.channel.typing():
                 # Process message from existing thread or TextChannel
                 await self.process_message(channel=channel)
-
-        elif self.thread_manager.is_channel_id_in_database(message.channel.id):
+        elif self.thread_manager.is_channel_id_in_database(message.channel.id) and message.author.id in Settings.WHITELIST:
             # Process message from existing thread or TextChannel
             await self.process_message(message)
+
     
     async def send_message(self, message: str, channel: discord.TextChannel):
         # If the message is over 2000 characters, split the first part, recurse the rest
