@@ -22,12 +22,21 @@ class DinkyDisBot(discord.Client):
         if message.author == self.user:
             return
         
-        if message.content.strip() == '!kill' and message.author.id == Settings.OWNER:
+        # Let's start with admin commands
+        if message.content.strip() == '!killswitch' and message.author.id == Settings.OWNER:
             # Kill the bot
             print("Killed bot.")
             exit()
-
-        if message.content.startswith('!thread'):
+        elif message.content.strip() == '!list' and message.author.id == Settings.OWNER:
+            # Kill the bot
+            await self.do_list_guilds(message.channel)
+        elif message.content.startswith('!bail') and message.author.id == Settings.OWNER:
+            # Param
+            param = message.content[len("!bail "):].strip()
+            
+            # Bail from a guild
+            await self.do_bail_out(int(param), message.channel)
+        elif message.content.startswith('!thread'):
             async with message.channel.typing():
                 # Param
                 param = message.content[len("!thread"):].strip()
@@ -56,10 +65,9 @@ class DinkyDisBot(discord.Client):
 
                 # Send the response
             await self.send_message(response, channel)
-        # Only allow if in WHITELIST
-        elif message.content.startswith('!continue') and message.author.id in Settings.WHITELIST:
+        elif message.content.startswith('!continue'):
             # Get the channel, preserve it
-            channel: discord.TextChannel = copy.deepcopy(message.channel)
+            channel: discord.TextChannel = self.get_channel(message.channel.id)
 
             # Add this channel to the database if it isn't already
             if not self.thread_manager.is_channel_id_in_database(channel.id):
@@ -74,12 +82,51 @@ class DinkyDisBot(discord.Client):
             async with message.channel.typing():
                 # Process message from existing thread or TextChannel
                 await self.process_message(channel=channel)
-        elif self.thread_manager.is_channel_id_in_database(message.channel.id) and message.author.id in Settings.WHITELIST:
+        elif self.thread_manager.is_channel_id_in_database(message.channel.id):
             # Process message from existing thread or TextChannel
             await self.process_message(message)
 
+    async def do_list_guilds(self, channel: discord.TextChannel):
+        """
+        To list the guilds the bot is in!
+
+        Args:
+            channel (discord.TextChannel): The channel to send the message to
+        """
+        guilds_str: str = "This bot is connected to " + str(len(self.guilds)) + " servers: \n"
+        async for guild in self.fetch_guilds(limit=150):
+            guilds_str += guild.name + " (" + str(guild.id) + ")\n"
+        await self.send_message(guilds_str, channel)
+
+    async def do_bail_out(self, server_id: int, channel: discord.TextChannel):
+        """
+        To bail out the bot from servers!
+
+        Args:
+            server_id (int): The ID of the server to leave
+            channel (discord.TextChannel): The channel to send the message to
+        """
+
+        guild_id: int = int(server_id)
+        guild: discord.Guild = self.get_guild(guild_id)
+        try: 
+            print(f"Bailing from {guild.name}")
+            await guild.leave()
+            await self.send_message("Successfully left ", channel)
+        except:
+            print(f"Guild does not exist! ID: {guild_id}")
+            await self.send_message(f"Guild does not exist! ID: {guild_id}", channel)
     
-    async def send_message(self, message: str, channel: discord.TextChannel):
+    async def send_message(self, message: str, channel: discord.TextChannel, split: int = 2000):
+        """
+        Sends a message to a channel, splitting it if it's a certain number of characters!
+
+        Args:
+            message (str): The message to send
+            channel (discord.TextChannel): The channel to send the message to
+            split (int, optional): The number of characters to split at. Defaults to 2000.
+        """
+
         # If the message is over 2000 characters, split the first part, recurse the rest
         if len(message) > 2000:
             await self.send_message(message[:2000], channel)
@@ -88,6 +135,14 @@ class DinkyDisBot(discord.Client):
             await channel.send(message)
 
     async def process_message(self, message: discord.Message = None, channel: discord.TextChannel = None) -> None:
+        """
+        Processes a message, either from a channel or a message, to respond
+
+        Args:
+            message (discord.Message, optional): The message to process. Defaults to None.
+            channel (discord.TextChannel, optional): The channel to process. Defaults to None.
+        """
+
         # Get the message log of the message's channel
         if channel is None:
             channel = message.channel
@@ -114,63 +169,6 @@ class DinkyDisBot(discord.Client):
 
             # Send the response
             await self.send_message(response, channel)
-
-    
-    async def on_message(self, message: discord.Message) -> None:
-        if message.author == self.user:
-            return
-
-        if message.content.startswith('!thread'):
-            async with message.channel.typing():
-                # Param
-                param = message.content[len("!thread"):].strip()
-
-                # Create a new thread
-                new_thread_name: str = message.author.name + "'s thread: " + param if param.strip() != "" else message.author.name + "'s thread"
-                new_thread: discord.TextChannel = await message.create_thread(
-                    name=new_thread_name,
-                )
-                await new_thread.send(f"New thread created by {message.author.mention}")
-                self.thread_manager.add_thread_to_database(new_thread.id, message.author.display_name)
-        elif message.content.startswith('!chat'):
-            async with message.channel.typing():
-                # Param
-                param = message.content[len("!chat"):].strip()
-
-                # Create a new MessageLog with just this message
-                message_log: MessageLog = MessageLog()
-                message_log.add_message(message.author.name, param)
-
-                # Get the response
-                response: str = self.backend.get_response(message_log=message_log, bot_name=self.user.name)
-
-                # Log the response using logging library
-                print(f"Response: {response}")
-
-                # Send the response
-                await self.send_message(response, channel)
-
-        elif message.content.startswith('!continue'):
-            # Get the channel, preserve it
-            channel: discord.TextChannel = self.get_channel(message.channel.id)
-
-            # Add this channel to the database if it isn't already
-            if not self.thread_manager.is_channel_id_in_database(channel.id):
-                self.thread_manager.add_thread_to_database(channel.id, message.author.display_name)
-
-            # delete the message
-            try:
-                await message.delete()
-            except discord.errors.Forbidden:
-                print("No delete perms, seethe. :^)")
-
-            async with message.channel.typing():
-                # Process message from existing thread or TextChannel
-                await self.process_message(channel=channel)
-
-        elif self.thread_manager.is_channel_id_in_database(message.channel.id):
-            # Process message from existing thread or TextChannel
-            await self.process_message(message)
     
 def run_bot():
     # defines permissions
